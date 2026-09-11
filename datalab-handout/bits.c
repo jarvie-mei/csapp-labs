@@ -412,5 +412,18 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
  *   Rating: 4
  */
 unsigned float_negpwr2(int x) {
-    return 2;
+    // The smallest denormalized number is 2^-149, which has an exponent of -126 and a fraction of 2^-23.
+    if ( x > 149) {
+        return 0;
+    }
+    // The largest normalized number is 2^128 - 2^ 104
+    if (x <= -128) {
+        return 0x7f800000;
+    }
+
+    if ( x < 127) {
+        return (-x + 127) << 23;
+    }
+    // For denormalized numbers, we need to shift the fraction to the left by 23 - (-126 + x) = 149 - x
+    return 1 << (149 -x);
 }
