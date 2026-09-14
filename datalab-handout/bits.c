@@ -226,7 +226,15 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int cleanConsecutive1(int x){
-    return 2;
+    int right_mask = x & (x << 1); // Identify positions that current and right bits are both 1
+    int left_mask = right_mask >> 1; // Identify positions that current and left bits are both 1
+    int consecutive_mask = right_mask | left_mask; // Combine both masks to get all positions
+    return x ^ consecutive_mask; // Flip the bits at those positions to 0 
+
+    // another way to implement this function is to use the following code:
+    // int right_mask = x << 1; // right neighbor of the i-th bit
+    // int left_mask = x >> 1 & ~(1 << 31); // left neighbor of the i-th bit
+    // return x & ~(right_mask | left_mask); // when the i-th bit is 1 and its left or right neighbor is 1, then it is a consecutive 1, we need to flip it to 0
 }
 /*
  * leftBitCount - returns count of number of consective 1's in
@@ -237,7 +245,33 @@ int cleanConsecutive1(int x){
  *   Rating: 4
  */
 int leftBitCount(int x) {
-  return 2;
+    int count = 0;
+    int t;
+    x = ~x; // It's easier to count leading zeros, because !0 is 1, but !x when x is not 0 always equal to 0 which makes it hard when shifting right some bits to determine if it is all ones or not.
+            // But zeros can be easily determined by shifting right some bits and check if it is 0 or not.
+    t = !(x >> 16) << 4;
+    x <<= t;
+    count += t;
+
+    t = !(x >> 24) << 3;
+    x <<= t;
+    count += t;
+
+    t = !(x >> 28) << 2;
+    x <<= t;
+    count += t;
+
+    t = !(x >> 30) << 1;
+    x <<= t;
+    count += t;
+
+    t = !(x >> 31);
+    count += t;
+
+    count += !x; // If x is 0, then we need to add 1 to the count, because we have counted all the leading zeros, but we need to count the last zero as well.
+    return count;
+    
+    
 }
 /* 
  * counter1To5 - return 1 + x if x < 5, return 1 otherwise, we ensure that 1<=x<=5
@@ -257,7 +291,7 @@ int counter1To5(int x) {
  *   Rating: 2
  */
 int sameSign(int x, int y) {
-  return 2;
+    return !((x ^ y) >> 31);
 }
 /*
  * satMul3 - multiplies by 3, saturating to Tmin or Tmax if overflow
@@ -347,7 +381,7 @@ unsigned float_i2f(int x) {
     int sign = (x >> 31) & 1, exp, frac, round;
     int frac_mask = 0x7fffff, x_exp;
     if (!x) return 0;
-    if (!(x ^ (1 << 31))) return 0xcf << 24;
+    if (!(x ^ (1 << 31))) return 0xcf << 24; // Handle the case of Tmin, which is -2^31, and its float representation is 0xcf000000
     if (sign) x = -x;
     x_exp = 30; // x_exp is the exponent of x in binary representation, which is the position of the highest set bit
     while(!(x >> x_exp)) {
