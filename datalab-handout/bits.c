@@ -247,7 +247,7 @@ int cleanConsecutive1(int x){
 int leftBitCount(int x) {
     int count = 0;
     int t;
-    x = ~x; // It's easier to count leading zeros, because !0 is 1, but !x when x is not 0 always equal to 0 which makes it hard when shifting right some bits to determine if it is all ones or not.
+    x = ~x; // It's easier to count leading zeros, because !0 is 1, but !x when x is not 0 always equal to 0, which makes it hard when shifting right some bits to determine if it is all ones or not.
             // But zeros can be easily determined by shifting right some bits and check if it is 0 or not.
     t = !(x >> 16) << 4;
     x <<= t;
@@ -281,7 +281,9 @@ int leftBitCount(int x) {
  *   Rating: 2
  */
 int counter1To5(int x) {
-  return 2;
+    int isFive = !(x + ~5 + 1);
+    int mask = ~isFive + 1; // mask is 0xFFFFFFFF if x == 5, otherwise it is 0x00000000
+    return x + 1 + (mask & ~4); // ~4 = -5, if x == 5, then return 1, otherwise return x + 1
 }
 /* 
  * sameSign - return 1 if x and y have same sign, and 0 otherwise
@@ -305,7 +307,14 @@ int sameSign(int x, int y) {
  *  Rating: 3
  */
 int satMul3(int x) {
-    return 2;
+    int x2 = x << 1;
+    int x3 = x2 + x;
+    int Tmin = 1 << 31;
+    int Tmax = ~Tmin;
+    int sign = x >> 31;
+    int overflow = ((x ^ x2) | (x ^ x3)) >> 31;
+    int sat = sign ^ Tmax;
+    return (overflow & sat) | (~overflow & x3);
 }
 /* 
  * isGreater - if x > y  then return 1, else return 0 
@@ -315,7 +324,16 @@ int satMul3(int x) {
  *   Rating: 3
  */
 int isGreater(int x, int y) {
-  return 2;
+    int sx = (x >> 31) & 1;
+    int sy = (y >> 31) & 1;
+    int signDiff = sx ^ sy;
+
+    int diff = x + ~y + 1;
+
+    int diffSign = (diff >> 31) & 1;
+
+
+    return (signDiff & !sx) | (!signDiff & !diffSign & !!diff);
 }
 /* 
  * subOK - Determine if can compute x-y without overflow
@@ -326,7 +344,15 @@ int isGreater(int x, int y) {
  *   Rating: 3
  */
 int subOK(int x, int y) {
-  return 2;
+    int sx = (x >> 31) & 1;
+    int sy = (y >> 31 & 1);
+    int diff = x + ~y + 1;
+    int diffSign = (diff >> 31) & 1;
+
+    int overflow = (sx ^ sy) & (sx ^ diffSign);
+
+    return !overflow;
+
 }
 /*
  * trueFiveEighths - multiplies by 5/8 rounding toward 0,
@@ -338,9 +364,18 @@ int subOK(int x, int y) {
  *  Max ops: 25
  *  Rating: 4
  */
-int trueFiveEighths(int x)
-{
-    return 2;
+
+ // x = 8q + r
+ // x * 5 / 8 = 5 * (8q + r) / 8 = 5q + 5r/8
+int trueFiveEighths(int x) {
+    int q = x >> 3, r = x & 7;
+    int q5 = (q << 2) + q;
+    int r5 = (r << 2) + r;
+
+    int bias = (x >> 31) & 7;
+
+    return q5 + (((r5 + bias)) >> 3);
+
 }
 /* 
  * float_half - Return bit-level equivalent of expression 0.5*f for
@@ -354,15 +389,17 @@ int trueFiveEighths(int x)
  *   Rating: 4
  */
 unsigned float_half(unsigned uf) {
-    int sign_mask = 0x80000000, exp_mask = 0x7F800000, frac_mask = 0x007FFFFF;
+    int sign_mask = 0x80000000, exp_mask = 0x7f800000, frac_mask = 0x007fffff;
     int sign = uf & sign_mask, exp = uf & exp_mask, frac = uf & frac_mask, round = !((uf & 3) ^ 3);
     if (!exp) {
-        return sign | ((frac >> 1) + round);
+        return sign | (((frac) >> 1) + round);
     }
+
     if (exp == exp_mask) {
         return uf;
     }
-    if (exp >> 23 == 1) {
+
+    if(exp >> 23 == 1) {
         return sign | (((exp | frac) >> 1) + round);
     }
 
